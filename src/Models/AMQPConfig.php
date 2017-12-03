@@ -46,7 +46,7 @@ class AMQPConfig extends BaseServiceConfigModel
             case 'port':
                 $schema['label'] = 'Broker Port';
                 $schema['default'] = 5672;
-                $schema['description'] = 'Port number of your AMQP broker.';
+                $schema['description'] = 'Port number of your AMQP broker. Default is 5672.';
                 break;
             case 'username':
                 $schema['label'] = 'Username';

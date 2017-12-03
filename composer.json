@@ -23,8 +23,14 @@
     "issues": "https://github.com/dreamfactorysoftware/df-amqp/issues",
     "wiki":   "https://github.com/dreamfactorysoftware/df-amqp/wiki"
   },
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/dreamfactorysoftware/df-pubsub"
+    }
+  ],
   "require":     {
-    "dreamfactory/df-core": "~0.13.0",
+    "dreamfactory/df-pubsub": "dev-develop as dev-master",
     "php-amqplib/php-amqplib": "2.7.*"
   },
   "autoload":    {

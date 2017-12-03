@@ -7,7 +7,7 @@ use DreamFactory\Core\Utility\Session;
 
 abstract class BaseService extends BaseRestService
 {
-    /** @var  \DreamFactory\Core\AMQP\Contracts\AMQPInterface */
+    /** @var \DreamFactory\Core\Contracts\MessageQueueInterface */
     protected $client;
 
     public function __construct(array $settings)
@@ -17,6 +17,16 @@ abstract class BaseService extends BaseRestService
         $config = array_get($settings, 'config');
         Session::replaceLookups($config, true);
         $this->setClient($config);
+    }
+
+    /**
+     * Returns the client component
+     *
+     * @return \DreamFactory\Core\Contracts\MessageQueueInterface
+     */
+    public function getClient()
+    {
+        return $this->client;
     }
 
     protected abstract function setClient($config);
