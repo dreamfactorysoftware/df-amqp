@@ -6,8 +6,9 @@ use DreamFactory\Core\AMQP\Components\AMQPClient;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\AMQP\Resources\Pub;
 use DreamFactory\Core\AMQP\Resources\Sub;
+use DreamFactory\Core\PubSub\Services\PubSub;
 
-class AMQP extends BaseService
+class AMQP extends PubSub
 {
     /** @type array Service Resources */
     protected static $resources = [

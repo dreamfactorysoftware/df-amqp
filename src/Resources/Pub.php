@@ -3,12 +3,9 @@
 namespace DreamFactory\Core\AMQP\Resources;
 
 use DreamFactory\Core\Exceptions\BadRequestException;
-use DreamFactory\Core\Resources\BaseRestResource;
 
-class Pub extends BaseRestResource
+class Pub extends \DreamFactory\Core\PubSub\Resources\Pub
 {
-    const RESOURCE_NAME = 'pub';
-
     /**
      * @return array|mixed
      * @throws \DreamFactory\Core\Exceptions\BadRequestException
@@ -17,7 +14,7 @@ class Pub extends BaseRestResource
     {
         $data = $this->request->getPayloadData();
         $this->validatePublishData($data);
-        $this->getService()->getClient()->publish($data);
+        $this->parent->getClient()->publish($data);
 
         return ['success' => true];
     }

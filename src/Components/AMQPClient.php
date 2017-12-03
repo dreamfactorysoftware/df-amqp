@@ -2,8 +2,8 @@
 
 namespace DreamFactory\Core\AMQP\Components;
 
-use DreamFactory\Core\Contracts\MessageQueueInterface;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
+use DreamFactory\Core\PubSub\Contracts\MessageQueueInterface;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 
