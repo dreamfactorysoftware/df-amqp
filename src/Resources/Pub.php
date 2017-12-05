@@ -27,13 +27,13 @@ class Pub extends \DreamFactory\Core\PubSub\Resources\Pub
      */
     protected function validatePublishData($data)
     {
-        if(empty($data)){
+        if (empty($data)) {
             throw new BadRequestException('Invalid or no data provided for publishing.');
         }
 
-        if(!empty($message = array_get_or($data, ['message', 'msg']))){
-            if(is_array($message)){
-                if(empty(array_get_or($message, ['body', 'message', 'msg']))){
+        if (!empty($message = array_get_or($data, ['message', 'msg']))) {
+            if (is_array($message)) {
+                if (empty(array_get_or($message, ['body', 'message', 'msg']))) {
                     throw new BadRequestException('No message body provided in message data object.');
                 }
             }
@@ -41,7 +41,7 @@ class Pub extends \DreamFactory\Core\PubSub\Resources\Pub
             throw new BadRequestException('No message provided in data to publish.');
         }
 
-        if(empty(array_get_or($data, ['routing_key', 'topic', 'queue', 'routing']))){
+        if (empty(array_get_or($data, ['routing_key', 'topic', 'queue', 'routing']))) {
             throw new BadRequestException('No topic/queue/routing_key provided for message publishing.');
         }
 
