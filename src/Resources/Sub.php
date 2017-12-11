@@ -126,8 +126,8 @@ class Sub extends \DreamFactory\Core\PubSub\Resources\Sub
         $base = [
             $path => [
                 'get'    => [
-                    'summary'     => 'Retrieves subscription/consumer jobs',
-                    'description' => 'Retrieves subscription/consumer jobs',
+                    'summary'     => 'Retrieves subscription/consumer job(s)',
+                    'description' => 'Retrieves subscription/consumer job(s)',
                     'operationId' => 'get' . $capitalized . 'SubscriptionJobs',
                     'responses'   => [
                         '200' => [
@@ -164,8 +164,8 @@ class Sub extends \DreamFactory\Core\PubSub\Resources\Sub
                     ],
                 ],
                 'post'   => [
-                    'summary'     => 'Creates subscriber(s)/consumer(s)',
-                    'description' => 'Creates subscriber(s)/consumer(s)',
+                    'summary'     => 'Creates subscriber/consumer job(s)',
+                    'description' => 'Creates subscriber/consumer job(s)',
                     'operationId' => 'subscribeTo' . $capitalized . 'Jobs',
                     'requestBody' => [
                         'description' => 'Subscriber(s)/Consumer(s) details',
@@ -193,8 +193,8 @@ class Sub extends \DreamFactory\Core\PubSub\Resources\Sub
                     ],
                 ],
                 'delete' => [
-                    'summary'     => 'Terminate subscription(s)',
-                    'description' => 'Terminate subscription(s)',
+                    'summary'     => 'Terminate subscription job(s)',
+                    'description' => 'Terminate subscription job(s)',
                     'operationId' => 'terminatesSubscriptionsTo' . $capitalized,
                     'responses'   => [
                         '200' => ['$ref' => '#/components/responses/Success']
