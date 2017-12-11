@@ -6,6 +6,7 @@ use DreamFactory\Core\AMQP\Jobs\Subscribe;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\PubSub\Contracts\MessageQueueInterface;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Exception\AMQPInvalidArgumentException;
 use PhpAmqpLib\Message\AMQPMessage;
 use DreamFactory\Core\Enums\Verbs;
 use ServiceManager;
@@ -14,6 +15,15 @@ use Log;
 
 class AMQPClient implements MessageQueueInterface
 {
+    /** Publishing mode */
+    const MODE_PUB = 1;
+
+    /** Subscription/consumer mode */
+    const MODE_SUB = 2;
+
+    /** Exchange type - fanout (broadcast) */
+    const EXCHANGE_FANOUT = 'fanout';
+
     /** @var string */
     protected $host;
 
@@ -31,6 +41,9 @@ class AMQPClient implements MessageQueueInterface
 
     /** @var string */
     protected $exchangeName = '';
+
+    /** @var string */
+    protected $exchangeType = self::EXCHANGE_FANOUT;
 
     /** @var string */
     protected $queueName = '';
@@ -86,7 +99,7 @@ class AMQPClient implements MessageQueueInterface
             throw new InternalServerErrorException('No message found for publishing.');
         }
         $amqpMsg = $this->getAMQPMessage($message);
-        $channel = $this->setupChannel($data);
+        $channel = $this->setupChannel($data, static::MODE_PUB);
         $channel->basic_publish($amqpMsg, $this->exchangeName, $this->queueName);
     }
 
@@ -97,9 +110,8 @@ class AMQPClient implements MessageQueueInterface
      */
     public function subscribe(array $data)
     {
-        Cache::forever(Subscribe::SUBSCRIPTION, json_encode($data, JSON_UNESCAPED_SLASHES));
         try {
-            $channel = $this->setupChannel($data);
+            $channel = $this->setupChannel($data, static::MODE_SUB);
             $qos = array_get($data, 'qos');
             if (!empty($qos) && is_array($qos)) {
                 $prefetchSize = array_get($qos, 'prefetch_size');
@@ -120,7 +132,10 @@ class AMQPClient implements MessageQueueInterface
                 if (is_array($service) && $msg->body !== Subscribe::TERMINATOR) {
                     Log::debug('[AMQP] Triggering service: ' . json_encode($service, JSON_UNESCAPED_SLASHES));
                     // Retrieve service information
-                    $endpoint = trim(array_get($service, 'endpoint'), '/');
+                    $endpoint = trim(array_get($service, 'endpoint', ''), '/');
+                    if (empty($endpoint)) {
+                        throw new AMQPInvalidArgumentException('No service endpoint provided for consumer task.');
+                    }
                     $endpoint = str_replace('api/v2/', '', $endpoint);
                     $endpointArray = explode('/', $endpoint);
                     $serviceName = array_get($endpointArray, 0);
@@ -145,8 +160,7 @@ class AMQPClient implements MessageQueueInterface
 
                 if ($msg->body === Subscribe::TERMINATOR) {
                     Log::info('[AMQP] Terminate subscription signal received. Ending subscription job.');
-                    Cache::forget(Subscribe::SUBSCRIPTION);
-
+                    Cache::forever(Subscribe::TERMINATOR, false);
                     $msg->delivery_info['channel']->basic_cancel($msg->delivery_info['consumer_tag']);
                 }
             };
@@ -165,7 +179,13 @@ class AMQPClient implements MessageQueueInterface
                 $arguments
             );
 
+            Log::info('[AMQP] Connected to AMQP server for subscription.');
             while (count($channel->callbacks)) {
+                if (Cache::get(Subscribe::TERMINATOR, false) === true) {
+                    Log::info('[AMQP] Terminate subscription signal received. Ending all subscription jobs.');
+                    Cache::forever(Subscribe::TERMINATOR, false);
+                    break;
+                }
                 $channel->wait();
             }
 
@@ -173,7 +193,6 @@ class AMQPClient implements MessageQueueInterface
             $this->connection->close();
         } catch (\Exception $e) {
             Log::error('[AMQP] Exception occurred. Terminating subscription. ' . $e->getMessage());
-            Cache::forget(Subscribe::SUBSCRIPTION);
         }
     }
 
@@ -181,11 +200,12 @@ class AMQPClient implements MessageQueueInterface
      * Sets up channel, exchange, queue, binding
      *
      * @param array $data
+     * @param int   $mode
      *
      * @return \PhpAmqpLib\Channel\AMQPChannel
      * @throws \DreamFactory\Core\Exceptions\InternalServerErrorException
      */
-    protected function setupChannel(array $data)
+    protected function setupChannel(array $data, $mode)
     {
         $channel = $this->getChannel(array_get_or($data, ['channel', 'channel_id']));
         $exchange = array_get($data, 'exchange', '');
@@ -193,22 +213,38 @@ class AMQPClient implements MessageQueueInterface
             $this->exchangeName = $this->declareExchange($channel, $exchange);
         }
         $queue = array_get_or($data, ['topic', 'queue'], '');
-        if (!empty($queue)) {
-            $this->queueName = $this->declareQueue($channel, $queue);
-        }
-
-        if (!empty($this->exchangeName) && !empty($this->queueName)) {
-            $routingKey = array_get_or(
-                $data,
-                ['routing_key', 'routing_keys', 'routing', 'binding_key', 'binding_keys', 'binding'],
-                ''
-            );
-            if (is_array($routingKey)) {
-                foreach ($routingKey as $rk) {
-                    $channel->queue_bind($this->queueName, $this->exchangeName, $rk);
+        $routingKey = array_get_or(
+            $data,
+            ['routing_key', 'routing_keys', 'routing', 'binding_key', 'binding_keys', 'binding'],
+            ''
+        );
+        if ($mode === static::MODE_PUB) {
+            if (!empty($this->exchangeName) && $this->exchangeType !== static::EXCHANGE_FANOUT) {
+                $this->queueName = $queue;
+                if (empty($this->queueName)) {
+                    if (is_array($routingKey)) {
+                        $routingKey = array_get($routingKey, 0);
+                    }
+                    if (empty($routingKey)) {
+                        throw new InternalServerErrorException('No routing key provided for exchange that is NOT of type ' .
+                            static::EXCHANGE_FANOUT .
+                            '.');
+                    }
+                    $this->queueName = $routingKey;
                 }
             } else {
-                $channel->queue_bind($this->queueName, $this->exchangeName, $routingKey);
+                $this->queueName = $this->declareQueue($channel, $queue);
+            }
+        } elseif ($mode === static::MODE_SUB) {
+            $this->queueName = $this->declareQueue($channel, $queue);
+            if (!empty($this->exchangeName) && !empty($this->queueName)) {
+                if (is_array($routingKey)) {
+                    foreach ($routingKey as $rk) {
+                        $channel->queue_bind($this->queueName, $this->exchangeName, $rk);
+                    }
+                } else {
+                    $channel->queue_bind($this->queueName, $this->exchangeName, $routingKey);
+                }
             }
         }
 
@@ -240,7 +276,7 @@ class AMQPClient implements MessageQueueInterface
             $name = array_get($queue, 'name', '');
             $passive = array_get($queue, 'passive', $passive);
             $durable = array_get($queue, 'durable', $durable);
-            $exclusive = array_get($queue, 'internal', $exclusive);
+            $exclusive = array_get($queue, 'exclusive', $exclusive);
             $autoDelete = array_get($queue, 'auto_delete', $autoDelete);
             $noWait = array_get_or($queue, ['nowait', 'no_wait'], $noWait);
             $arguments = array_get_or($queue, ['argument', 'arguments'], $arguments);
@@ -314,7 +350,7 @@ class AMQPClient implements MessageQueueInterface
     {
         $name = $exchange;
         // Defaults
-        $type = 'fanout';
+        $type = static::EXCHANGE_FANOUT;
         $passive = false;
         $durable = false;
         $autoDelete = true;
@@ -341,6 +377,7 @@ class AMQPClient implements MessageQueueInterface
         $channel->exchange_declare(
             $name, $type, $passive, $durable, $autoDelete, $internal, $noWait, $arguments, $ticket
         );
+        $this->exchangeType = $type;
 
         return $name;
     }

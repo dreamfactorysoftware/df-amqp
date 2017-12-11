@@ -10,6 +10,9 @@ use DreamFactory\Core\PubSub\Services\PubSub;
 
 class AMQP extends PubSub
 {
+    /** Queue type */
+    const QUEUE_TYPE = 'AMQP';
+
     /** @type array Service Resources */
     protected static $resources = [
         Pub::RESOURCE_NAME => [
@@ -42,5 +45,11 @@ class AMQP extends PubSub
         $vhost = array_get($config, 'vhost');
 
         $this->client = new AMQPClient($host, $username, $password, $port, $vhost);
+    }
+
+    /** {@inheritdoc} */
+    public function getQueueType()
+    {
+        return static::QUEUE_TYPE;
     }
 }

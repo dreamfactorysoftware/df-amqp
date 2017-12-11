@@ -2,6 +2,7 @@
 
 namespace DreamFactory\Core\AMQP\Resources;
 
+use DreamFactory\Core\AMQP\Components\SwaggerDefinitions;
 use DreamFactory\Core\Exceptions\BadRequestException;
 
 class Pub extends \DreamFactory\Core\PubSub\Resources\Pub
@@ -41,10 +42,50 @@ class Pub extends \DreamFactory\Core\PubSub\Resources\Pub
             throw new BadRequestException('No message provided in data to publish.');
         }
 
-        if (empty(array_get_or($data, ['routing_key', 'topic', 'queue', 'routing']))) {
-            throw new BadRequestException('No topic/queue/routing_key provided for message publishing.');
+        if (empty(array_get_or($data, ['exchange', 'topic', 'queue', 'routing']))) {
+            throw new BadRequestException('No topic/queue/exchange provided for message publishing.');
         }
 
         return true;
+    }
+
+    /** {@inheritdoc} */
+    protected function getApiDocPaths()
+    {
+        $service = $this->getServiceName();
+        $capitalized = camelize($service);
+        $resourceName = strtolower($this->name);
+        $path = '/' . $resourceName;
+        $base = [
+            $path => [
+                'post' => [
+                    'summary'     => 'Publish message',
+                    'description' => 'Publishes message to AMQP server',
+                    'operationId' => 'publish' . $capitalized . 'Message',
+                    'requestBody' => [
+                        'description' => 'Content - Message and exchange/queue to publish to',
+                        'content'     => [
+                            'application/json' => [
+                                'schema' => [
+                                    'type'       => 'object',
+                                    'required'   => ['queue', 'message'],
+                                    'properties' => [
+                                        'exchange'    => SwaggerDefinitions::getExchangeDef(),
+                                        'queue'       => SwaggerDefinitions::getQueueDef(),
+                                        'routing_key' => SwaggerDefinitions::getRoutingKeyDef(),
+                                        'message'     => SwaggerDefinitions::getMessageDef(),
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                    'responses'   => [
+                        '200' => ['$ref' => '#/components/responses/Success']
+                    ],
+                ],
+            ],
+        ];
+
+        return $base;
     }
 }
