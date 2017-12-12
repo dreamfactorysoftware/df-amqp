@@ -146,6 +146,7 @@ class Sub extends \DreamFactory\Core\PubSub\Resources\Sub
                                                     'properties' => [
                                                         'exchange'    => SwaggerDefinitions::getExchangeDef(),
                                                         'queue'       => SwaggerDefinitions::getQueueDef(),
+                                                        'qos'         => SwaggerDefinitions::getQosDef(),
                                                         'routing_key' => SwaggerDefinitions::getRoutingKeyDef(),
                                                         'service'     => SwaggerDefinitions::getServiceDef(),
                                                     ]
@@ -179,6 +180,7 @@ class Sub extends \DreamFactory\Core\PubSub\Resources\Sub
                                         'properties' => [
                                             'exchange'    => SwaggerDefinitions::getExchangeDef(),
                                             'queue'       => SwaggerDefinitions::getQueueDef(),
+                                            'qos'         => SwaggerDefinitions::getQosDef(),
                                             'routing_key' => SwaggerDefinitions::getRoutingKeyDef(),
                                             'service'     => SwaggerDefinitions::getServiceDef(),
                                         ],

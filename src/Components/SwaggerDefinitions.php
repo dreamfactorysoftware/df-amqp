@@ -31,6 +31,22 @@ class SwaggerDefinitions extends BaseDefinitions
     /**
      * @return array
      */
+    static public function getQosDef()
+    {
+        return [
+            'type'        => 'object',
+            'properties'  => [
+                'prefetch_size'  => ['type' => 'integer'],
+                'prefetch_count' => ['type' => 'integer'],
+                'a_global'       => ['type' => 'boolean']
+            ],
+            'description' => 'Set basic qos.'
+        ];
+    }
+
+    /**
+     * @return array
+     */
     static public function getExchangeDef()
     {
         return [

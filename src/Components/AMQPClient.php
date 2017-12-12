@@ -5,9 +5,7 @@ namespace DreamFactory\Core\AMQP\Components;
 use DreamFactory\Core\AMQP\Jobs\Subscribe;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\PubSub\Contracts\MessageQueueInterface;
-use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Exception\AMQPInvalidArgumentException;
-use PhpAmqpLib\Message\AMQPMessage;
 use DreamFactory\Core\Enums\Verbs;
 use ServiceManager;
 use Cache;
@@ -48,7 +46,7 @@ class AMQPClient implements MessageQueueInterface
     /** @var string */
     protected $queueName = '';
 
-    /** @var \PhpAmqpLib\Connection\AMQPStreamConnection */
+    /** @var \DreamFactory\Core\AMQP\Contracts\AMQPConnectionInterface */
     protected $connection = null;
 
     /**
@@ -75,7 +73,7 @@ class AMQPClient implements MessageQueueInterface
     protected function setConnection()
     {
         if (empty($this->connection)) {
-            $this->connection = new AMQPStreamConnection(
+            $this->connection = AMQPFactory::Connection(
                 $this->host,
                 $this->port,
                 $this->username,
@@ -112,14 +110,6 @@ class AMQPClient implements MessageQueueInterface
     {
         try {
             $channel = $this->setupChannel($data, static::MODE_SUB);
-            $qos = array_get($data, 'qos');
-            if (!empty($qos) && is_array($qos)) {
-                $prefetchSize = array_get($qos, 'prefetch_size');
-                $prefetchCount = array_get($qos, 'prefetch_count');
-                $aGlobal = array_get($qos, 'a_global');
-                $channel->basic_qos($prefetchSize, $prefetchCount, $aGlobal);
-            }
-
             $consumerTag = array_get($data, 'consumer_tag', '');
             $noLocal = array_get($data, 'no_local', false);
             $noAck = array_get($data, 'no_ack', false);
@@ -246,6 +236,13 @@ class AMQPClient implements MessageQueueInterface
                     $channel->queue_bind($this->queueName, $this->exchangeName, $routingKey);
                 }
             }
+            $qos = array_get($data, 'qos');
+            if (!empty($qos) && is_array($qos)) {
+                $prefetchSize = array_get($qos, 'prefetch_size');
+                $prefetchCount = array_get($qos, 'prefetch_count');
+                $aGlobal = array_get($qos, 'a_global');
+                $channel->basic_qos($prefetchSize, $prefetchCount, $aGlobal);
+            }
         }
 
         return $channel;
@@ -301,7 +298,7 @@ class AMQPClient implements MessageQueueInterface
      *
      * @param string|array $messageProp
      *
-     * @return \PhpAmqpLib\Message\AMQPMessage
+     * @return \DreamFactory\Core\AMQP\Contracts\AMQPMessageInterface
      * @throws \DreamFactory\Core\Exceptions\InternalServerErrorException
      */
     protected function getAMQPMessage($messageProp)
@@ -320,7 +317,7 @@ class AMQPClient implements MessageQueueInterface
             $body = json_encode($body, JSON_UNESCAPED_SLASHES);
         }
 
-        return new AMQPMessage($body, $messageProp);
+        return AMQPFactory::Message($body, $messageProp);
     }
 
     /**
