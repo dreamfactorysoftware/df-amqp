@@ -1,0 +1,45 @@
+{
+  "name":        "dreamfactory/df-amqp",
+  "description": "AMQP based client service for DreamFactory",
+  "keywords":    [
+    "dreamfactory",
+    "dsp",
+    "rest",
+    "iot",
+    "amqp",
+    "rabbitmq"
+  ],
+  "homepage":    "https://github.com/dreamfactorysoftware/df-amqp",
+  "license":     "proprietary",
+  "authors":     [
+    {
+      "name":  "Arif Islam",
+      "email": "arifislam@dreamfactory.com"
+    }
+  ],
+  "support":     {
+    "email":  "dspsupport@dreamfactory.com",
+    "source": "https://github.com/dreamfactorysoftware/df-amqp",
+    "issues": "https://github.com/dreamfactorysoftware/df-amqp/issues",
+    "wiki":   "https://wiki.dreamfactory.com"
+  },
+  "require":     {
+    "dreamfactory/df-pubsub": "~0.1.0",
+    "php-amqplib/php-amqplib": "2.7.*"
+  },
+  "autoload":    {
+    "psr-4": {
+      "DreamFactory\\Core\\AMQP\\": "src/"
+    }
+  },
+  "extra":       {
+    "branch-alias": {
+      "dev-develop": "0.1.x-dev"
+    },
+    "laravel": {
+      "providers": [
+        "DreamFactory\\Core\\AMQP\\ServiceProvider"
+      ]
+    }
+  }
+}
