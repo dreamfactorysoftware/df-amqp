@@ -24,7 +24,7 @@
     "wiki":   "https://wiki.dreamfactory.com"
   },
   "require":     {
-    "dreamfactory/df-pubsub": "~0.1.1",
+    "dreamfactory/df-pubsub": "dev-laravel-upgrade",
     "php-amqplib/php-amqplib": "2.7.*"
   },
   "autoload":    {
