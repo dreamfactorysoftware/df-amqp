@@ -7,6 +7,7 @@ use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\AMQP\Resources\Pub;
 use DreamFactory\Core\AMQP\Resources\Sub;
 use DreamFactory\Core\PubSub\Services\PubSub;
+use \Illuminate\Support\Arr;
 
 class AMQP extends PubSub
 {
@@ -38,11 +39,11 @@ class AMQP extends PubSub
             throw new InternalServerErrorException('No service configuration found for AMQP service.');
         }
 
-        $host = array_get($config, 'host');
-        $port = array_get($config, 'port', 5672);
-        $username = array_get($config, 'username');
-        $password = array_get($config, 'password');
-        $vhost = array_get($config, 'vhost');
+        $host = Arr::get($config, 'host');
+        $port = Arr::get($config, 'port', 5672);
+        $username = Arr::get($config, 'username');
+        $password = Arr::get($config, 'password');
+        $vhost = Arr::get($config, 'vhost');
 
         $this->client = new AMQPClient($host, $username, $password, $port, $vhost);
     }

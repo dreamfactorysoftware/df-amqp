@@ -53,10 +53,10 @@ class Sub extends \DreamFactory\Core\PubSub\Resources\Sub
             if ($job->attempts === 0) {
                 DB::table('jobs')->delete($job->id);
             } else {
-                $obj = unserialize(array_get(json_decode($job->payload, true), 'data.command'));
+                $obj = unserialize(Arr::get(json_decode($job->payload, true), 'data.command'));
                 $payload = $obj->getPayload();
                 $channel = array_get_or($payload, ['channel', 'channel_id']);
-                $exchange = array_get($payload, 'exchange');
+                $exchange = Arr::get($payload, 'exchange');
                 $queue = array_get_or($payload, ['queue', 'topic']);
                 $routingKey = array_get_or(
                     $payload,
