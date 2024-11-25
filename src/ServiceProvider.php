@@ -21,7 +21,6 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
                     'label'                 => 'AMQP Client',
                     'description'           => 'AMQP Client service for DreamFactory',
                     'group'                 => ServiceTypeGroups::IOT,
-                    'subscription_required' => LicenseLevel::SILVER,
                     'config_handler'        => AMQPConfig::class,
                     'factory'               => function ($config){
                         return new AMQP($config);
