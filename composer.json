@@ -32,7 +32,7 @@
     }
   ],
   "require":     {
-    "dreamfactory/df-pubsub": "~0.2",
+    "dreamfactory/df-pubsub": "~0.3",
     "php-amqplib/php-amqplib": "^3.1.1"
   },
   "autoload":    {
