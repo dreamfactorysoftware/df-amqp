@@ -15,14 +15,14 @@ class AMQPClientTest extends \DreamFactory\Core\Testing\TestCase
     private $pass = 'secret';
     private $vhost = '/';
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
         $this->client = $this->getNewClient();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         unset($this->client);
 
