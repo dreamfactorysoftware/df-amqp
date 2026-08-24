@@ -9,6 +9,7 @@ use DreamFactory\Core\Exceptions\ForbiddenException;
 use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\Exceptions\NotFoundException;
 use DreamFactory\Core\PubSub\Jobs\BaseSubscriber;
+use DreamFactory\Core\Utility\Session;
 use Illuminate\Support\Arr;
 use DB;
 
@@ -22,7 +23,15 @@ class Sub extends \DreamFactory\Core\PubSub\Resources\Sub
 
         if (!$this->isJobRunning()) {
             $jobCount = 0;
+            // Bind the caller's identity to each subscription so the deferred
+            // consumer runs the triggered service request under the creator's
+            // role (permission-checked), not with permissions disabled.
+            $runAs = [
+                'app_id'  => Session::get('app.id'),
+                'user_id' => Session::getCurrentUserId(),
+            ];
             foreach ($payload as $pl) {
+                $pl['run_as'] = $runAs;
                 $job = new Subscribe($this->parent->getClient(), $pl);
                 dispatch($job);
                 $jobCount++;
