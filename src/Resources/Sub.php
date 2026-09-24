@@ -6,8 +6,10 @@ use DreamFactory\Core\AMQP\Components\SwaggerDefinitions;
 use DreamFactory\Core\AMQP\Jobs\Subscribe;
 use DreamFactory\Core\Exceptions\BadRequestException;
 use DreamFactory\Core\Exceptions\ForbiddenException;
+use DreamFactory\Core\Exceptions\InternalServerErrorException;
 use DreamFactory\Core\Exceptions\NotFoundException;
 use DreamFactory\Core\PubSub\Jobs\BaseSubscriber;
+use DreamFactory\Core\Utility\Session;
 use Illuminate\Support\Arr;
 use DB;
 
@@ -21,7 +23,15 @@ class Sub extends \DreamFactory\Core\PubSub\Resources\Sub
 
         if (!$this->isJobRunning()) {
             $jobCount = 0;
+            // Bind the caller's identity to each subscription so the deferred
+            // consumer runs the triggered service request under the creator's
+            // role (permission-checked), not with permissions disabled.
+            $runAs = [
+                'app_id'  => Session::get('app.id'),
+                'user_id' => Session::getCurrentUserId(),
+            ];
             foreach ($payload as $pl) {
+                $pl['run_as'] = $runAs;
                 $job = new Subscribe($this->parent->getClient(), $pl);
                 dispatch($job);
                 $jobCount++;
@@ -53,7 +63,21 @@ class Sub extends \DreamFactory\Core\PubSub\Resources\Sub
             if ($job->attempts === 0) {
                 DB::table('jobs')->delete($job->id);
             } else {
-                $obj = unserialize(Arr::get(json_decode($job->payload, true), 'data.command'));
+                // Constrain unserialize to ONLY the Subscribe job class.
+                // Without allowed_classes, an attacker who could write to the
+                // jobs table (or otherwise influence the queue payload) gets
+                // PHP gadget-chain RCE via __wakeup/__destruct on arbitrary
+                // classes. The only legitimate object here is the AMQP
+                // Subscribe job that this controller scheduled itself.
+                $serialized = Arr::get(json_decode($job->payload, true), 'data.command');
+                $obj = unserialize($serialized, [
+                    'allowed_classes' => [\DreamFactory\Core\AMQP\Jobs\Subscribe::class],
+                ]);
+                if (!$obj instanceof \DreamFactory\Core\AMQP\Jobs\Subscribe) {
+                    throw new InternalServerErrorException(
+                        'Refusing to process queue job with unexpected class.'
+                    );
+                }
                 $payload = $obj->getPayload();
                 $channel = array_get_or($payload, ['channel', 'channel_id']);
                 $exchange = Arr::get($payload, 'exchange');
