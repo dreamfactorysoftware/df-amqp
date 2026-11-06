@@ -146,23 +146,35 @@ class AMQPClient implements MessageQueueInterface
                     // the callback dispatched with permissions disabled, letting
                     // any pub/sub-capable user reach admin-only endpoints.
                     $runAs = Arr::get($data, 'run_as', []);
-                    $appId = (int)Arr::get($runAs, 'app_id');
+                    $appId = Arr::get($runAs, 'app_id');
+                    $appId = !empty($appId) ? (int)$appId : null;
                     $userId = Arr::get($runAs, 'user_id');
                     $userId = !empty($userId) ? (int)$userId : null;
-                    if (!empty($appId)) {
+                    if (!empty($appId) || !empty($userId)) {
+                        // An app on its own carries the app's role; a user on its own
+                        // is how an admin-created subscription runs. Either is enough
+                        // to establish an identity.
                         Session::setSessionData($appId, $userId);
-                        if ($apiKey = App::getCachedInfo($appId, 'api_key')) {
+                        if (!empty($appId) && ($apiKey = App::getCachedInfo($appId, 'api_key'))) {
                             Session::setApiKey($apiKey);
                         }
                     }
 
-                    /** @var \DreamFactory\Core\Utility\ServiceResponse $rs */
-                    $rs =
-                        ServiceManager::handleRequest($serviceName, $verb, $resource, $params, $header, $payload, null,
-                            true);
-                    $content = $rs->getContent();
-                    $content = (is_array($content)) ? json_encode($content) : $content;
-                    Log::debug('[AMQP] Trigger response: ' . $content);
+                    try {
+                        /** @var \DreamFactory\Core\Utility\ServiceResponse $rs */
+                        $rs =
+                            ServiceManager::handleRequest($serviceName, $verb, $resource, $params, $header, $payload,
+                                null, true);
+                        $content = $rs->getContent();
+                        $content = (is_array($content)) ? json_encode($content) : $content;
+                        Log::debug('[AMQP] Trigger response: ' . $content);
+                    } catch (\Exception $e) {
+                        // One failed trigger must not end the subscription. The outer
+                        // catch treats any exception as fatal, and the ack below would
+                        // never run, so the broker redelivers the message and it takes
+                        // down the next consumer too. Log it and move on.
+                        Log::error('[AMQP] Trigger failed for ' . $verb . ' ' . $endpoint . ': ' . $e->getMessage());
+                    }
                 }
 
                 $msg->delivery_info['channel']->basic_ack($msg->delivery_info['delivery_tag']);
